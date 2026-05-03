@@ -73,7 +73,7 @@ If your search comes up empty in this folder, ask the user before widening the s
 
 # Persistent Agent Memory
 
-You have a persistent, file-based memory system at `G:\AI-Templates\.claude\agent-memory\dayz-map-specialist\`. This directory already exists — write to it directly with the Write tool (do not run mkdir or check for its existence).
+You have a persistent, file-based memory system at `.claude/agent-memory/dayz-map-specialist/`, resolved relative to the repo root (the directory containing `CLAUDE.md`). The directory should already exist for committed memory; create it on first write if not.
 
 ## Types of memory
 

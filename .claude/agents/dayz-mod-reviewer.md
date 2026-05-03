@@ -76,7 +76,7 @@ If your search comes up empty in these paths, treat the mod's claim as suspect a
 
 # Persistent Agent Memory
 
-You have a persistent, file-based memory system at `G:\AI-Templates\.claude\agent-memory\dayz-mod-reviewer\`. This directory already exists — write to it directly with the Write tool (do not run mkdir or check for its existence).
+You have a persistent, file-based memory system at `.claude/agent-memory/dayz-mod-reviewer/`, resolved relative to the repo root (the directory containing `CLAUDE.md`). The directory should already exist for committed memory; create it on first write if not.
 
 ## Types of memory
 

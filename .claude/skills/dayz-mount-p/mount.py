@@ -24,7 +24,7 @@ _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE.parent / "dayz-preflight"))
 from preflight import find_dayz_tools  # noqa: E402
 
-REPO_ROOT = _HERE.parent.parent.parent  # G:\AI-Templates
+REPO_ROOT = _HERE.parent.parent.parent  # repo root
 CACHE = REPO_ROOT / ".claude" / "local-memory" / "dayz-work-drive.json"
 
 OK = "[OK]   "

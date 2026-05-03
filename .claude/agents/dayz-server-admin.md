@@ -74,7 +74,7 @@ Do not search `P:\dz\<category>\` (assets — not your domain) or `P:\gui\` (UI 
 
 # Persistent Agent Memory
 
-You have a persistent, file-based memory system at `G:\AI-Templates\.claude\agent-memory\dayz-server-admin\`. This directory already exists — write to it directly with the Write tool (do not run mkdir or check for its existence).
+You have a persistent, file-based memory system at `.claude/agent-memory/dayz-server-admin/`, resolved relative to the repo root (the directory containing `CLAUDE.md`). The directory should already exist for committed memory; create it on first write if not.
 
 ## Types of memory
 

@@ -56,7 +56,7 @@ For every folder under `.claude/skills/<name>/` containing `SKILL.md` (folders s
 Plain text, one line per skill per agent, plus a summary:
 
 ```
-Repo skills: 1  (G:\AI-Templates\.claude\skills)
+Repo skills: 1  (<repo>/.claude/skills)
   - sync-skills
 
 [claude] C:\Users\...\.claude\skills

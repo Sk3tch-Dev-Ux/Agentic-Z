@@ -50,7 +50,7 @@ DayZ P:\ mount
 
 [INFO]  Mounting P: -> C:\Users\you\DayZ-WorkDrive
 [OK]    P:\ mounted -> C:\Users\you\DayZ-WorkDrive
-[INFO]  Cached for future runs at G:\AI-Templates\.claude\local-memory\dayz-work-drive.json
+[INFO]  Cached for future runs at <repo>/.claude/local-memory/dayz-work-drive.json
 ```
 
 If P:\ is already mounted:

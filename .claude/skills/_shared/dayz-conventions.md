@@ -35,15 +35,15 @@ Skills resolve paths in this order: env var → Windows registry (Tools only) �
 
 Skills MUST use the shared resolver helpers (`find_dayz_tools`, `find_vanilla_data` in `dayz-preflight/preflight.py`) rather than re-implementing path discovery. This keeps the resolution order consistent across the whole DayZ skill set.
 
-## RAG embedding (local)
+## RAG embedding (cloud, optional)
 
-The RAG layer (`/dayz-rag-index` + the `dayz-rag` MCP server) runs **fully locally** with `nomic-ai/CodeRankEmbed` (137M-param code-specialised model, 768-dim, top of CoIR). No API keys, no network calls, no per-query cost.
+The RAG layer (`/dayz-rag-index` + the `dayz-rag` MCP server) runs against **Voyage AI** (`voyage-code-3` by default, 1024-dim, asymmetric encoding: `input_type="document"` at index time, `input_type="query"` at search time). Free tier covers ~3 full vanilla rebuilds. Add `VOYAGE_API_KEY=pa-…` to `.env` at the repo root before running `/dayz-rag-index` or any agent that uses `search_dayz_source`.
 
-- First indexer run downloads ~280MB of model weights to the HuggingFace cache (`~/.cache/huggingface/`). After that, indexing and queries are entirely offline.
-- Full index: ~7,000 chunks, builds in ~90s on a typical CPU.
-- Per-query latency: ~50-150ms (local embed + numpy cosine).
+- Skip the build entirely with `/dayz-rag-download` — pulls a prebuilt vanilla+wiki index from GitHub releases (~1 min). No key needed for download; query-time embedding still requires the key.
+- Full local rebuild via `/dayz-rag-index --full` is ~25-30 min and 5-65M tokens depending on the corpus and model.
+- Without a key, agents fall back to `Grep` over `P:\scripts\` and the documented vanilla paths — fully functional, just less smart.
 
-DayZ Tools is the only per-machine install needed. There's no per-clone API key.
+DayZ Tools is the only per-machine install needed. The Voyage key is per-clone (`.env` is gitignored by default).
 
 ## Project layout
 
@@ -124,7 +124,7 @@ When the user requests a color/theme change: ask for scope FIRST (single element
 
 ## Vanilla source recall — `search_dayz_source` MCP tool
 
-The `dayz-rag` MCP server exposes semantic search over indexed vanilla DayZ source: `.c` (Enforce Script under `P:\scripts\`), `.layout` (GUI under `P:\gui\`), and `.cpp`/`.cfg`/`.hpp`/`.h` config blocks (under `P:\dz\` and friends). Backed by a per-user numpy + sqlite index at `~/.claude/dayz-rag-index/`, built and rebuilt by `/dayz-rag-index --full`. Embedding runs locally via `nomic-ai/CodeRankEmbed` — no API keys, no network calls.
+The `dayz-rag` MCP server exposes semantic search over indexed vanilla DayZ source: `.c` (Enforce Script under `P:\scripts\`), `.layout` (GUI under `P:\gui\`), and `.cpp`/`.cfg`/`.hpp`/`.h` config blocks (under `P:\dz\` and friends). Backed by a per-user LanceDB index at `~/.claude/dayz-rag-index/`, built and rebuilt by `/dayz-rag-index --full`. Embeddings run via Voyage AI (`voyage-code-3` by default) — set `VOYAGE_API_KEY` in `.env` at the repo root.
 
 **Default to Grep for code-shaped questions** (class names, symbol lookups, exact strings, inheritance trees via `class X extends Y` patterns). `Grep` over `P:\scripts\` is sub-second and exhaustive.
 
