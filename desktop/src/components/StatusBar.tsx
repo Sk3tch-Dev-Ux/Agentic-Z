@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { CheckCircle2, XCircle, Activity, Search, Settings, Lightbulb } from "lucide-react";
+import { CheckCircle2, XCircle, Activity, Search, Settings, Lightbulb, Info } from "lucide-react";
 import { Api } from "../api/client";
 
 interface StatusBarProps {
   onOpenSearch?: () => void;
+  onOpenAbout?: () => void;
 }
 
-export function StatusBar({ onOpenSearch }: StatusBarProps) {
+export function StatusBar({ onOpenSearch, onOpenAbout }: StatusBarProps) {
   const preflight = useQuery({ queryKey: ["preflight"], queryFn: Api.preflight });
   const repoInfo = useQuery({ queryKey: ["repoInfo"], queryFn: Api.repoInfo });
   const health = useQuery({
@@ -78,6 +79,11 @@ export function StatusBar({ onOpenSearch }: StatusBarProps) {
         <Link to="/settings" className="flex items-center gap-1 hover:text-white" title="Settings">
           <Settings className="w-3 h-3" />
         </Link>
+        {onOpenAbout && (
+          <button onClick={onOpenAbout} className="flex items-center gap-1 hover:text-white" title="About">
+            <Info className="w-3 h-3" />
+          </button>
+        )}
         {repoInfo.data?.repo_root && (
           <span>repo: {repoInfo.data.repo_root.split(/[\\/]/).slice(-2).join("/")}</span>
         )}

@@ -1,135 +1,93 @@
 # Agentic-Z Desktop
 
-Desktop interface for the Agentic-Z DayZ modding toolkit. Tauri 2 shell wrapping a React + TypeScript frontend that talks to a long-lived Python (FastAPI) sidecar.
+DayZ modding command center. Pitch a mod idea, watch Claude write it. Audit and ship mods autonomously. Live error stream, semantic search across vanilla + your code, skill proposals you can promote with one click.
 
-This is **D1 — scaffold + dashboard**. It proves the architecture end-to-end: Tauri spawns the sidecar at startup, the sidecar imports the existing CLI skills and exposes them over HTTP, the React frontend reads preflight + mod-list state and renders a dashboard. D2-D6 layer features on top without changing the foundation.
+Built on top of the [Agentic-Z CLI toolkit](../README.md) — same agents, same skills, same `.claude/` layout, just with a real interface around them.
 
-## Prerequisites
+---
 
-| What | Why | Install |
-|---|---|---|
-| **Python 3.10+** | sidecar runtime + every CLI skill | python.org |
-| **Node.js 18+** + **pnpm** | frontend build | nodejs.org → `npm i -g pnpm` |
-| **Rust toolchain** (`rustup`) | Tauri shell | rustup.rs |
-| **Tauri prerequisites** (Microsoft Edge WebView2 on Windows) | OS WebView | usually preinstalled on Windows 10+ |
+## What it does
 
-The Tauri docs at <https://v2.tauri.app/start/prerequisites/> have the OS-by-OS breakdown.
+| Feature | What it gets you |
+|---|---|
+| **Mod Creator** | Type a plain-English pitch ("medkit that heals over 30s, 2% military spawn"). Claude writes the full scaffold — `config.cpp`, `$PBOPREFIX$`, scripts in 3_Game/4_World/5_Mission, types.xml entries — following the EnScript style guide. Click Build → Launch. |
+| **Director** | Goal-pursuing agent. Say "ship MyMod" → it audits → fixes → re-audits → builds → launches → tails logs. Live state-machine diagram. Hard caps prevent runaway loops. |
+| **Live event feed** | Diag server/client RPTs + script.log + BattlEye logs streamed into the app, classified by lane (script / config / asset / server / ui / debug) with one-line fix hints. |
+| **One-click build/launch** | Build, Launch, Stop buttons. AddonBuilder output streams live in a panel. PIDs surface for the diag server + client. |
+| **RAG search (Ctrl+K)** | Semantic search across vanilla DayZ, the Bohemia community wiki, and your own workspace mods. File:line preview. "Open in editor" jumps you to VS Code. |
+| **Skill proposal manager** | The `/agentic-z-promote-skill` meta-skill scans your agent memory for recurring patterns and drafts new skills. Review them in the UI, edit inline, promote with one click. |
 
-## First-time setup
+---
 
-From the repo root:
+## Install (end users)
+
+For developers building from source, see [`docs/BUILDING.md`](docs/BUILDING.md).
+
+### Prerequisites
+
+| What | Why |
+|---|---|
+| **Windows 10 or 11** | DayZ Tools is Windows-only; v1 is Windows-first. |
+| **DayZ + DayZ Tools** (Steam) | The actual modding environment. |
+| **Python 3.10+** on PATH | The sidecar runtime + every CLI skill. |
+| **Anthropic API key** | For the Mod Creator and Audit features. Pay-as-you-go on your account. |
+| **Voyage AI key** *(optional)* | For Cmd+K semantic search. Free tier covers 200M tokens. |
+
+### Steps
+
+1. Download the latest `Agentic-Z_<version>_x64-setup.exe` from [Releases](https://github.com/dayznchill/Agentic-Z/releases).
+2. Run the installer. (Windows SmartScreen will warn — the installer isn't code-signed for v1.0; click "More info" → "Run anyway".)
+3. Launch Agentic-Z. The first-run wizard walks you through API keys + author handle + DayZ environment check.
+4. From the Dashboard, click **"New mod from pitch"** → describe your idea → watch Claude generate.
+
+Full install + first-run walkthrough: [`docs/INSTALL.md`](docs/INSTALL.md).
+
+---
+
+## Architecture (one paragraph)
+
+A Tauri 2 shell over a Python (FastAPI) sidecar over the existing Agentic-Z CLI skills. The Tauri Rust binary spawns the sidecar at startup, the sidecar imports the existing skill modules as a long-lived process, and the React frontend talks to it over HTTP + Server-Sent Events on `localhost`. The `dayz-coder.md` agent definition is loaded as the Mod Creator's system prompt; tool calls (`write_file`, `done`) generate the actual mod files. No business logic in Rust — the shell just spawns and cleans up. No Python embedded in Rust — the sidecar runs as a normal subprocess and can be tested standalone via `python sidecar/main.py`.
+
+Full architecture rationale + alternatives considered: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+---
+
+## Build from source
 
 ```cmd
-cd desktop
-pnpm install                         :: frontend deps
+:: Prerequisites: Node 20, pnpm, Rust toolchain (rustup), Python 3.10+
+git clone https://github.com/dayznchill/Agentic-Z
+cd Agentic-Z\desktop
+pnpm install
 pip install -r sidecar\requirements.txt
+pnpm tauri:dev          :: dev mode with hot reload
+:: or:
+pnpm tauri:build        :: production .exe at src-tauri\target\release\bundle\nsis\
 ```
 
-That's it. No global installs, no codegen, no native compilation up front (Tauri compiles its Rust shell on first `pnpm tauri:dev`).
+CI builds on tag push (`desktop-v*.*.*`) — see `.github/workflows/desktop-release.yml`.
 
-## Dev workflow
+---
 
-```cmd
-:: From the desktop\ folder:
-pnpm tauri:dev
-```
+## Roadmap (post-1.0)
 
-What this does:
+- Code signing for Windows (no SmartScreen warning) — ~$200/year cert decision pending
+- macOS + Linux builds (Tauri supports them; v1 is Windows because DayZ is)
+- Workshop publishing inside the app (`PublisherCmd.exe` integration)
+- BattlEye filter sync — diff your server filters against recent kicks, suggest whitelist additions
+- Visual mod-merger — diff/merge UI for combining workspace mods
 
-1. Starts Vite on `http://localhost:5173` (frontend hot-reload).
-2. Builds the Tauri Rust shell (~30-60 s on first run, sub-second on subsequent).
-3. Tauri spawns `python sidecar\main.py` as a child process.
-4. The sidecar discovers a free port (7321 by default), writes it to `<repo>/.claude/local-memory/agentic-z-desktop.port`.
-5. The Tauri window opens; the frontend reads the port via the Tauri `get_sidecar_status` command and starts hitting `http://127.0.0.1:<port>/api/*`.
+Open issues + feature requests at [github.com/dayznchill/Agentic-Z/issues](https://github.com/dayznchill/Agentic-Z/issues).
 
-Edit any file under `src/` → instant hot-reload in the window. Edit `sidecar/main.py` → Tauri restart needed (or run the sidecar standalone with `pnpm sidecar:dev` and reload the window).
+---
 
-## Sidecar standalone (no Tauri)
+## Community
 
-The sidecar runs fine without the Tauri shell — useful for testing endpoints from the browser at <http://localhost:7321/docs> (FastAPI Swagger UI).
+- **Discord:** [discord.gg/dayznchill](https://discord.gg/dayznchill) — DayZ n' Chill modding community.
+- **Contributing:** [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md). PRs welcome — small ones especially. The codebase is intentionally boring (React + TypeScript + Tailwind + FastAPI) so newcomers can land changes fast.
 
-```cmd
-cd desktop\sidecar
-python main.py --reload
-```
+---
 
-Or with hot-reload via the package script:
+## License
 
-```cmd
-cd desktop
-pnpm sidecar:dev
-```
-
-## Production build
-
-```cmd
-cd desktop
-pnpm tauri:build
-```
-
-Output: `desktop\src-tauri\target\release\bundle\nsis\Agentic-Z_0.1.0_x64-setup.exe` (and msi). Distribute that single .exe.
-
-The first production build takes 5-10 minutes (Rust release compile). Subsequent builds are faster thanks to incremental compilation.
-
-## Architecture in one paragraph
-
-The desktop app is a thin Tauri shell over a Python sidecar. The sidecar is a long-lived FastAPI process that imports the existing Agentic-Z skill modules (preflight, mod walking, RAG search, etc.) and exposes them as HTTP endpoints. The React frontend talks to localhost over HTTP for synchronous calls and SSE for live event streams (D2). The Tauri Rust shell does only three things: spawn the sidecar at startup, expose the chosen port to the frontend via `get_sidecar_status`, and clean up the sidecar process when the window closes. No Python is embedded in Rust; no Rust does business logic. This separation lets you run the sidecar standalone for testing and keeps the frontend a regular SPA.
-
-## File map
-
-```
-desktop/
-├── package.json              # pnpm workspace root
-├── pnpm-workspace.yaml       # (optional)
-├── tsconfig.json
-├── vite.config.ts
-├── tailwind.config.js
-├── postcss.config.js
-├── index.html
-├── README.md  ← you are here
-├── src/                      # React + TypeScript
-│   ├── main.tsx              # entrypoint + providers
-│   ├── App.tsx               # routes
-│   ├── index.css             # tailwind base
-│   ├── api/client.ts         # sidecar HTTP client
-│   ├── stores/useStatus.ts   # zustand
-│   ├── components/
-│   │   ├── StatusBar.tsx     # top bar (preflight, P:\, sidecar)
-│   │   └── ModSidebar.tsx    # left rail (mod list)
-│   └── pages/
-│       ├── Dashboard.tsx     # default page
-│       └── ModDetail.tsx     # per-mod page (D2 will activate buttons)
-├── src-tauri/                # Tauri Rust shell
-│   ├── Cargo.toml
-│   ├── tauri.conf.json
-│   ├── build.rs
-│   └── src/main.rs           # spawns sidecar, exposes commands
-└── sidecar/                  # FastAPI Python backend
-    ├── main.py               # all D1 endpoints (will split in D2)
-    └── requirements.txt
-```
-
-## Roadmap
-
-| Phase | What | When |
-|---|---|---|
-| **D1** | Scaffold + dashboard (preflight, mod list, sidecar wiring) | shipped |
-| **D2** | Live event stream (SSE over dayz-watch.log) + skill buttons (Build / Launch / Stop / Audit / Ship It) | next |
-| **D3** | dayz-director state-machine visualizer | |
-| **D4** | Inline RAG search (Cmd+K, all 3 corpora) | |
-| **D5** | Skill proposal manager | |
-| **D6** | Polish + GitHub release | |
-
-See [`output/dayz-coder-extract/desktop-design.md`](../output/dayz-coder-extract/desktop-design.md) for the full design rationale and the alternatives considered.
-
-## Troubleshooting
-
-**Sidecar offline pill in status bar.** The Python process didn't start or crashed. Run `pnpm sidecar:dev` in a separate terminal to see the actual error.
-
-**`pnpm tauri:dev` fails with "Rust not found".** Install via <https://rustup.rs>. Restart the terminal afterward.
-
-**Tauri window opens but the dashboard is blank.** Vite dev server didn't start. Check that nothing else is listening on port 5173.
-
-**Build output is huge / slow.** First Tauri build is always heavy. Subsequent builds are incremental. The release `.exe` is ~5-10 MB.
-
-**Sidecar can't find skills.** The sidecar resolves the repo root from its own location (`<repo>/desktop/sidecar/main.py`). Make sure `desktop/` is at the repo root and the existing `.claude/skills/dayz-preflight/preflight.py` exists.
+Free to use for developing DayZ modifications. See [`../LICENSE`](../LICENSE) (Copyright © 2026 Brian Orr / DayZ n' Chill).
