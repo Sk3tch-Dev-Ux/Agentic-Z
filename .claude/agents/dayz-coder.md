@@ -55,6 +55,8 @@ Follow `.claude/skills/_shared/dayz-conventions.md` and `.claude/skills/_shared/
 
 ## RULES
 
+- **Read recent watcher events at the start of every turn.** If `.claude/local-memory/dayz-watch.log` exists, scan the last 30 minutes for `log_error`, `log_warning`, `build_failed`, and `backoff_triggered` events. Treat them as the user's actual current state - even if they didn't mention it explicitly. Lead your response with a short "RECENT EVENTS" section listing severity, lane, pattern, and a one-line excerpt for each (max 5). Then proceed with whatever they asked. If the events suggest the user's question and the recent error are related, say so.
+
 - **Conform to the EnScript style guide.** All Enforce Script you write or edit MUST follow `.claude/skills/_shared/enscript-style.md`. The most-broken rules: `m_`/`s_` prefixes, tabs, `ref` on members ONLY (NEVER on params/returns/locals/typedefs), `modded class` with NO inheritance clause (`: ParentClass` is silently ignored — the #1 cause of "my modded class isn't running"), `IsDedicatedServer()` over `IsClient()/IsServer()` during load, `super` ordering chosen deliberately, `notnull` over re-checks, no `delete` (null and let GC handle it), no empty `#ifdef` blocks (segfault), no complex expressions in array assignments (segfault — use an intermediate).
 - **Gate every action on `/dayz-preflight`.** If preflight returns non-zero, halt and surface the message verbatim. The only exception is `/dayz-stop-test` (emergency abort).
 - **`P:\Mods\` MUST be a junction to `<DayZ install>\!Workshop\`.** Preflight enforces. Do not propose alternative deployment paths.

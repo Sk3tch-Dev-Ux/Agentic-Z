@@ -1,7 +1,9 @@
 """DayZ live-iteration watcher.
 
 Watch `workspace/<ModName>/` for changes. Classify each change. Dispatch the
-right downstream skill automatically:
+right downstream skill automatically. Optionally also tail diag server/client
+logs and emit structured error events back into the same log so dayz-coder
+can read them at the start of every turn.
 
   - `.c` (Enforce Script) -> log "filePatching will pick this up; reconnect to apply"
   - `.cpp` / `.hpp` / `.h` / `.layout` / `$PBOPREFIX$` / anything in `data/`
@@ -12,21 +14,27 @@ right downstream skill automatically:
         -> log "server reload required to apply"
   - everything in `_server/`, `.git/`, `__pycache__/`, build artifacts -> ignore
 
-Also re-runs `/dayz-rag-workspace-index <ModName>` on every change cycle so the
-agents always have an up-to-date semantic index of your code (cheap thanks to
-the chunk-hash skip in Phase 1). Pass --no-rag to disable.
+After every cycle that touched anything: run `/dayz-rag-workspace-index <ModName>`
+so the agents always have an up-to-date semantic index of your code (cheap
+thanks to the chunk-hash skip in Phase 1). Pass --no-rag to disable.
+
+With --with-logs: also tail diag server RPT + client RPT + BattlEye logs each
+tick. Recognized error patterns get classified (severity + lane + hint) and
+emitted to .claude/local-memory/dayz-watch.log. dayz-coder reads that log at
+turn start to surface what's actually happening before you ask.
 
 Implementation choice: pure stdlib polling, not `watchdog`. OneDrive folders
 flake on inotify-style events; polling is dumb and bulletproof. Polling
 interval defaults to 0.5s, debounce window 1.0s. Both are tunable.
 
 Run:
-    python .claude/skills/dayz-watch/watch.py                   # all mods, run forever
-    python .claude/skills/dayz-watch/watch.py MyMod             # one mod
-    python .claude/skills/dayz-watch/watch.py --once            # one classification cycle, exit
-    python .claude/skills/dayz-watch/watch.py --dry-run         # detect + log, never build
-    python .claude/skills/dayz-watch/watch.py --no-rag          # skip workspace re-index on each save
-    python .claude/skills/dayz-watch/watch.py --debounce 2.0    # wait 2s of quiet before dispatching
+    python .claude/skills/dayz-watch/watch.py                     # all mods, run forever
+    python .claude/skills/dayz-watch/watch.py MyMod               # one mod
+    python .claude/skills/dayz-watch/watch.py --once              # one cycle, exit
+    python .claude/skills/dayz-watch/watch.py --dry-run           # detect + log, never build
+    python .claude/skills/dayz-watch/watch.py --no-rag            # skip workspace re-index
+    python .claude/skills/dayz-watch/watch.py --with-logs MyMod   # also tail diag logs
+    python .claude/skills/dayz-watch/watch.py --debounce 2.0      # quiet window before dispatching
 """
 from __future__ import annotations
 
@@ -399,8 +407,6 @@ def _handle_changes(
         if args.auto_pack:
             for src in cls.texture_sources:
                 _pack_texture(src, mod, args.dry_run)
-            # A new/updated .paa written next to the source counts as a
-            # rebuild trigger because the .paa is what AddonBuilder packs.
             cls.needs_rebuild = True
         else:
             print(
@@ -432,6 +438,28 @@ def _handle_changes(
         _reindex_workspace(mod.name, args.dry_run)
 
 
+def _tick_log_tailers(tailers, dedup) -> int:
+    """Run one polling pass over all configured log tailers. Emit classified
+    events. Return number of events emitted."""
+    from log_tail import classify_line, gc_dedup
+    emitted = 0
+    for tailer in tailers:
+        for record in tailer.tick(REPO_ROOT):
+            event = classify_line(record, dedup)
+            if event is None:
+                continue
+            event_name = "log_error" if event["severity"] == "error" else "log_warning"
+            _log_event(event_name, **event)
+            print(
+                f"  [{event['severity'].upper():7s}] [{event['lane']}] "
+                f"{event['pattern']}  {event['excerpt'][:120]}"
+            )
+            print(f"           hint: {event['hint']}")
+            emitted += 1
+    gc_dedup(dedup)
+    return emitted
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mod_name", nargs="?", default=None,
@@ -444,6 +472,9 @@ def main() -> int:
                         help="Skip the /dayz-rag-workspace-index call after each cycle.")
     parser.add_argument("--auto-pack", action="store_true",
                         help="Auto-run /dayz-pack-texture on PNG/TGA with valid suffix tails.")
+    parser.add_argument("--with-logs", action="store_true",
+                        help="Tail diag server/client RPTs + script.log + BattlEye logs; "
+                             "classify known errors and emit structured events.")
     parser.add_argument("--debounce", type=float, default=1.0,
                         help="Quiet seconds before dispatching (default 1.0).")
     parser.add_argument("--interval", type=float, default=0.5,
@@ -472,13 +503,26 @@ def main() -> int:
         return 1
     print(f"{OK} Watching: {', '.join(m.name for m in mods)}")
     print(f"{INFO} Debounce: {args.debounce:.1f}s  Polling: {args.interval:.1f}s  "
-          f"Auto-pack: {args.auto_pack}  RAG re-index: {not args.no_rag}")
+          f"Auto-pack: {args.auto_pack}  RAG re-index: {not args.no_rag}  "
+          f"With logs: {args.with_logs}")
     print(f"{INFO} Log: {LOG_PATH}")
     print(f"{INFO} Ctrl+C to stop.\n")
 
     states = {m.name: ModState() for m in mods}
     snapshots = {m.name: _walk_snapshot(m) for m in mods}
     pending: dict[str, dict] = {}
+
+    log_tailers: list = []
+    log_dedup: dict = {}
+    if args.with_logs:
+        try:
+            from log_tail import configure_default_tailers
+            log_tailers = configure_default_tailers()
+        except ImportError as e:
+            print(f"{FAIL} --with-logs requires log_tail.py alongside watch.py: {e}",
+                  file=sys.stderr)
+            return 1
+        print(f"{OK} Log tailers active: {[t.label for t in log_tailers]}\n")
 
     _log_event(
         "watch_started",
@@ -487,6 +531,7 @@ def main() -> int:
         polling_interval_seconds=args.interval,
         auto_pack=args.auto_pack,
         no_rag=args.no_rag,
+        with_logs=args.with_logs,
         dry_run=args.dry_run,
     )
 
@@ -512,6 +557,10 @@ def main() -> int:
                     mod = next(m for m in mods if m.name == mod_name)
                     _handle_changes(mod, info["changes"], states[mod_name], args)
                     del pending[mod_name]
+
+            # 3. Tail diag logs (if enabled)
+            if args.with_logs:
+                _tick_log_tailers(log_tailers, log_dedup)
 
             if args.once:
                 # Flush any not-yet-debounced pending immediately and exit.
