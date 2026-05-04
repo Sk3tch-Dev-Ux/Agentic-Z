@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
+// D3 ModDetail — Ship It button now navigates to the director page after copying
+// the prompt to the clipboard. Also gets a DirectorPanel summary.
+
+import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2, XCircle, Hammer, Play, Square, ClipboardCheck, Rocket, Loader2,
@@ -8,9 +10,11 @@ import { Api } from "../api/client";
 import { useStatus } from "../stores/useStatus";
 import { SkillRunPanel } from "../components/SkillRunPanel";
 import { EventFeed } from "../components/EventFeed";
+import { DirectorPanel } from "../components/DirectorPanel";
 
 export function ModDetail() {
   const { name } = useParams<{ name: string }>();
+  const navigate = useNavigate();
   const mods = useQuery({ queryKey: ["mods"], queryFn: Api.listMods });
   const queryClient = useQueryClient();
   const modRuns = useStatus((s) => s.modRuns);
@@ -23,7 +27,6 @@ export function ModDetail() {
     mutationFn: () => Api.buildMod(name!),
     onSuccess: (r) => {
       setModRun(name!, "buildRunId", r.run_id);
-      // After build settles the workspace state changes (PBO appears, etc.)
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ["mods"] }), 5000);
     },
   });
@@ -47,6 +50,12 @@ export function ModDetail() {
 
   const anyMutating = buildMut.isPending || launchMut.isPending || stopMut.isPending;
 
+  async function onShipIt() {
+    const prompt = `Use dayz-director with goal: ship ${mod!.name}`;
+    try { await navigator.clipboard.writeText(prompt); } catch {}
+    navigate("/director");
+  }
+
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6 min-h-0">
       <div>
@@ -66,38 +75,34 @@ export function ModDetail() {
       <div className="panel p-4">
         <div className="font-medium mb-3">Actions</div>
         <div className="flex flex-wrap gap-2">
-          <button
-            className="btn-accent flex items-center gap-2"
-            onClick={() => buildMut.mutate()}
-            disabled={anyMutating}
-          >
+          <button className="btn-accent flex items-center gap-2"
+            onClick={() => buildMut.mutate()} disabled={anyMutating}>
             {buildMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Hammer className="w-4 h-4" />}
             Build
           </button>
-          <button
-            className="btn flex items-center gap-2"
-            onClick={() => launchMut.mutate()}
-            disabled={anyMutating}
-          >
+          <button className="btn flex items-center gap-2"
+            onClick={() => launchMut.mutate()} disabled={anyMutating}>
             {launchMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
             Launch
           </button>
-          <button
-            className="btn flex items-center gap-2"
-            onClick={() => stopMut.mutate()}
-            disabled={anyMutating}
-          >
+          <button className="btn flex items-center gap-2"
+            onClick={() => stopMut.mutate()} disabled={anyMutating}>
             {stopMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Square className="w-4 h-4" />}
             Stop
           </button>
-          <button className="btn flex items-center gap-2 opacity-50" disabled>
+          <button className="btn flex items-center gap-2 opacity-50" disabled
+                  title="Anthropic API integration lands in D6">
             <ClipboardCheck className="w-4 h-4" /> Audit (D6)
           </button>
-          <button className="btn flex items-center gap-2 opacity-50" disabled>
-            <Rocket className="w-4 h-4" /> Ship It (D3)
+          <button className="btn flex items-center gap-2"
+                  onClick={onShipIt}
+                  title="Copies the goal to clipboard and opens the director page">
+            <Rocket className="w-4 h-4" /> Ship It
           </button>
         </div>
       </div>
+
+      <DirectorPanel />
 
       {myRuns.buildRunId && (
         <SkillRunPanel
@@ -131,11 +136,7 @@ export function ModDetail() {
 function Row({ label, ok }: { label: string; ok: boolean }) {
   return (
     <div className="flex items-center gap-2">
-      {ok ? (
-        <CheckCircle2 className="w-4 h-4 text-ok" />
-      ) : (
-        <XCircle className="w-4 h-4 text-err" />
-      )}
+      {ok ? <CheckCircle2 className="w-4 h-4 text-ok" /> : <XCircle className="w-4 h-4 text-err" />}
       <span className={ok ? "text-gray-200" : "text-err"}>{label}</span>
     </div>
   );
