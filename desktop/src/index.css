@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    background: theme(colors.bg.DEFAULT);
+    color: rgb(229 231 235);
+  }
+}
+
+@layer components {
+  .panel {
+    @apply bg-bg-panel border border-bg-elevated rounded-md;
+  }
+  .btn {
+    @apply px-3 py-1.5 rounded border text-sm font-medium transition-colors;
+    @apply bg-bg-panel border-bg-elevated hover:bg-bg-elevated;
+  }
+  .btn-accent {
+    @apply bg-accent-dim border-accent hover:bg-accent text-white;
+  }
+  .pill {
+    @apply px-2 py-0.5 rounded text-xs font-mono;
+  }
+  .pill-ok    { @apply pill bg-ok/20 text-ok; }
+  .pill-warn  { @apply pill bg-warn/20 text-warn; }
+  .pill-err   { @apply pill bg-err/20 text-err; }
+  .pill-muted { @apply pill bg-bg-elevated text-muted; }
+}
