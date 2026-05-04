@@ -5,10 +5,6 @@ description = "Agentic-Z desktop — DayZ modding command center"
 authors = ["DayZ n' Chill"]
 edition = "2021"
 
-[lib]
-name = "agentic_z_lib"
-crate-type = ["lib", "cdylib", "staticlib"]
-
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
