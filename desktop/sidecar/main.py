@@ -1,10 +1,10 @@
-"""Agentic-Z desktop sidecar — D4.
+"""Agentic-Z desktop sidecar — D5.
 
 D1: health, repo info, preflight, mods.
-D2: SSE for watch-log + skill subprocess endpoints (build/launch/stop/new-mod) + run streams.
+D2: SSE for watch-log + skill subprocess endpoints + run streams.
 D3: SSE for director status + postmortem listing + reset.
-D4: RAG endpoints — search across vanilla/wiki/workspace, file slices, manifests,
-    open-in-editor.
+D4: RAG endpoints — search + file slice + manifests + open-in-editor.
+D5: skill proposal manager + Anthropic API integration + Mod Creator.
 """
 from __future__ import annotations
 
@@ -13,7 +13,6 @@ import asyncio
 import json
 import os
 import socket
-import subprocess
 import sys
 import time
 import uuid
@@ -45,6 +44,8 @@ except ImportError:
 
 from director import make_router as make_director_router  # noqa: E402
 from rag import make_router as make_rag_router  # noqa: E402
+from proposals import make_router as make_proposals_router  # noqa: E402
+from anthropic_api import make_router as make_anthropic_router  # noqa: E402
 
 
 class HealthResponse(BaseModel):
@@ -52,7 +53,7 @@ class HealthResponse(BaseModel):
 
 class RepoInfoResponse(BaseModel):
     repo_root: str; claude_dir: str; workspace_dir: str
-    has_dayz_preflight_skill: bool; sidecar_version: str = "0.4.0"
+    has_dayz_preflight_skill: bool; sidecar_version: str = "0.5.0"
 
 class PreflightResponse(BaseModel):
     p_drive_mounted: bool; dayz_tools_path: Optional[str]; vanilla_data_path: Optional[str]
@@ -78,7 +79,7 @@ class ActiveRunsResponse(BaseModel):
     runs: list[ActiveRun]
 
 
-app = FastAPI(title="Agentic-Z Desktop Sidecar", version="0.4.0")
+app = FastAPI(title="Agentic-Z Desktop Sidecar", version="0.5.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173",
@@ -87,9 +88,11 @@ app.add_middleware(
 )
 _started_at = time.time()
 
-# Mount D3 + D4 routers
+# Mount D3-D5 routers
 app.include_router(make_director_router(REPO_ROOT))
 app.include_router(make_rag_router(REPO_ROOT))
+app.include_router(make_proposals_router(REPO_ROOT))
+app.include_router(make_anthropic_router(REPO_ROOT))
 
 
 @app.get("/api/health", response_model=HealthResponse)

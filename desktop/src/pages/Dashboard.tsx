@@ -1,12 +1,16 @@
-// D4 Dashboard — RAG stat card now live with chunk count from /api/rag/manifests.
+// D5 Dashboard — Proposals stat card now live, "Create from pitch" hero button.
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Zap, Search, Lightbulb } from "lucide-react";
+import { Activity, Zap, Search, Lightbulb, Wand2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Api, WatchLogEvent } from "../api/client";
 import { RagApi } from "../api/rag";
+import { ProposalsApi } from "../api/proposals";
 import { EventFeed } from "../components/EventFeed";
 import { useNotifyOnError } from "../api/notify";
 import { DirectorPanel } from "../components/DirectorPanel";
+import { ModCreatorDialog } from "../components/ModCreatorDialog";
 
 export function Dashboard() {
   const preflight = useQuery({ queryKey: ["preflight"], queryFn: Api.preflight });
@@ -14,10 +18,10 @@ export function Dashboard() {
   const activeRuns = useQuery({
     queryKey: ["activeRuns"], queryFn: Api.activeRuns, refetchInterval: 2000,
   });
-  const ragManifests = useQuery({
-    queryKey: ["ragManifests"], queryFn: RagApi.manifests,
-  });
+  const ragManifests = useQuery({ queryKey: ["ragManifests"], queryFn: RagApi.manifests });
+  const proposals = useQuery({ queryKey: ["proposals"], queryFn: ProposalsApi.list });
   const notify = useNotifyOnError();
+  const [creatorOpen, setCreatorOpen] = useState(false);
 
   function onError(ev: WatchLogEvent) { notify(ev); }
 
@@ -29,16 +33,25 @@ export function Dashboard() {
         ragManifests.data.wiki      && `${ragManifests.data.wiki.total_chunks} wiki`,
       ].filter(Boolean).join(" · ") || "no chunks indexed"
     : "RAG offline";
+  const proposalCount = proposals.data?.proposals.length ?? 0;
 
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6 min-h-0">
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted text-sm mt-1">
-          Live event stream below. Pick a mod from the sidebar — or hit{" "}
-          <kbd className="font-mono text-[11px] bg-bg-elevated px-1 rounded">Ctrl+K</kbd>{" "}
-          to search across vanilla, your code, and the wiki.
-        </p>
+      <div className="flex items-start gap-4">
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-muted text-sm mt-1">
+            Live event stream below. Pick a mod from the sidebar — or hit{" "}
+            <kbd className="font-mono text-[11px] bg-bg-elevated px-1 rounded">Ctrl+K</kbd>{" "}
+            to search across vanilla, your code, and the wiki.
+          </p>
+        </div>
+        <button
+          onClick={() => setCreatorOpen(true)}
+          className="btn-accent flex items-center gap-2"
+        >
+          <Wand2 className="w-4 h-4" /> New mod from pitch
+        </button>
       </div>
 
       {preflight.data && !preflight.data.overall_ok && (
@@ -62,8 +75,11 @@ export function Dashboard() {
                   value={ragValue}
                   icon={<Search className="w-4 h-4" />}
                   sub={ragSub} />
-        <StatCard label="Proposals (D5)" value="—" icon={<Lightbulb className="w-4 h-4" />}
-                  sub="pending review" muted />
+        <Link to="/proposals" className="block">
+          <StatCard label="Proposals" value={proposalCount}
+                    icon={<Lightbulb className="w-4 h-4" />}
+                    sub={proposalCount === 0 ? "(none pending)" : "click to review"} />
+        </Link>
       </div>
 
       <DirectorPanel />
@@ -71,6 +87,8 @@ export function Dashboard() {
       <div className="min-h-[400px] flex">
         <EventFeed onError={onError} />
       </div>
+
+      <ModCreatorDialog open={creatorOpen} onClose={() => setCreatorOpen(false)} />
     </div>
   );
 }
