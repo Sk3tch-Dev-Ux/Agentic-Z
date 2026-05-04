@@ -5,13 +5,13 @@ import { ModSidebar } from "./components/ModSidebar";
 import { Dashboard } from "./pages/Dashboard";
 import { ModDetail } from "./pages/ModDetail";
 import { DirectorPage } from "./pages/DirectorPage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { ProposalsPage } from "./pages/ProposalsPage";
 import { SearchPalette } from "./components/SearchPalette";
 import { useHotkey } from "./hooks/useHotkey";
 
 export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
-
-  // Cmd+K / Ctrl+K — toggle the search palette.
   useHotkey({ key: "k", ctrl: true }, () => setSearchOpen((o) => !o));
 
   return (
@@ -24,6 +24,8 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/mod/:name" element={<ModDetail />} />
             <Route path="/director" element={<DirectorPage />} />
+            <Route path="/proposals" element={<ProposalsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

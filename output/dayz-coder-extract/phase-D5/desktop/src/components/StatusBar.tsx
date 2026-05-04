@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, XCircle, Activity, Search } from "lucide-react";
+import { Link } from "react-router-dom";
+import { CheckCircle2, XCircle, Activity, Search, Settings, Lightbulb } from "lucide-react";
 import { Api } from "../api/client";
 
 interface StatusBarProps {
@@ -22,10 +23,10 @@ export function StatusBar({ onOpenSearch }: StatusBarProps) {
 
   return (
     <header className="border-b border-bg-elevated bg-bg-panel px-4 py-2 flex items-center gap-4 text-sm">
-      <div className="flex items-center gap-2 font-semibold">
+      <Link to="/" className="flex items-center gap-2 font-semibold hover:text-accent-bright">
         <span className="text-accent-bright">⌘</span>
         Agentic-Z
-      </div>
+      </Link>
 
       <div className="flex items-center gap-2">
         {overallIcon}
@@ -71,6 +72,12 @@ export function StatusBar({ onOpenSearch }: StatusBarProps) {
       )}
 
       <div className="ml-auto flex items-center gap-3 text-xs text-muted font-mono">
+        <Link to="/proposals" className="flex items-center gap-1 hover:text-white" title="Skill proposals">
+          <Lightbulb className="w-3 h-3" />
+        </Link>
+        <Link to="/settings" className="flex items-center gap-1 hover:text-white" title="Settings">
+          <Settings className="w-3 h-3" />
+        </Link>
         {repoInfo.data?.repo_root && (
           <span>repo: {repoInfo.data.repo_root.split(/[\\/]/).slice(-2).join("/")}</span>
         )}
