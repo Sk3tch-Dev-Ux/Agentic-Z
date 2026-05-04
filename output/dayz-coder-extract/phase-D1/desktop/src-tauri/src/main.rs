@@ -167,27 +167,37 @@ fn main() {
 
             // Wait briefly for the port file. The sidecar writes it within
             // ~50-200ms of startup; we poll for up to 10s.
-            let state_handle = app.state::<AppState>();
+            //
+            // Can't move `state: State<'_, AppState>` into a 'static thread
+            // (it borrows from `app`). Clone the AppHandle (which IS 'static —
+            // it's an Arc internally) and re-acquire state inside the thread.
+            let app_handle_for_thread = app.handle().clone();
             let repo_root_clone = repo_root.clone();
             std::thread::spawn(move || {
                 for _ in 0..50 {
                     std::thread::sleep(Duration::from_millis(200));
                     if let Some(port) = read_port_file(&repo_root_clone) {
-                        let mut s = state_handle.status.lock().unwrap();
-                        s.port = Some(port);
+                        let s = app_handle_for_thread.state::<AppState>();
+                        let mut status = s.status.lock().unwrap();
+                        status.port = Some(port);
                         return;
                     }
                 }
-                let mut s = state_handle.status.lock().unwrap();
-                s.error = Some("sidecar started but port file never appeared".into());
+                let s = app_handle_for_thread.state::<AppState>();
+                let mut status = s.status.lock().unwrap();
+                status.error = Some("sidecar started but port file never appeared".into());
             });
 
             Ok(())
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                let state = window.state::<AppState>();
-                if let Some(mut child) = state.child.lock().unwrap().take() {
+                // Bind the Option<Child> to its own variable so the MutexGuard
+                // (and thus the borrow of `state`) is dropped before the if-let
+                // body runs. Avoids E0597.
+                let state: tauri::State<'_, AppState> = window.state();
+                let child_opt = state.child.lock().unwrap().take();
+                if let Some(mut child) = child_opt {
                     let _ = child.kill();
                 }
             }
