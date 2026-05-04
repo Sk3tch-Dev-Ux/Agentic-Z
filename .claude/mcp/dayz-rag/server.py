@@ -26,6 +26,7 @@ from typing import Optional
 INDEX_ROOT = Path.home() / ".claude" / "dayz-rag-index"
 TABLE_NAME = "chunks"
 WIKI_TABLE_NAME = "wiki_chunks"
+WORKSPACE_TABLE_NAME = "workspace_chunks"
 DEFAULT_EMBED_MODEL = "voyage-code-3"
 MAX_TOP_K = 25
 MAX_FILE_BYTES = 200_000
@@ -68,6 +69,7 @@ _voyage_client = None
 _embed_model: Optional[str] = None
 _table = None
 _wiki_table = None
+_workspace_table = None
 
 
 def _get_client():
@@ -140,6 +142,56 @@ def _get_wiki_table():
             )
         _wiki_table = db.open_table(WIKI_TABLE_NAME)
     return _wiki_table
+
+
+def _get_workspace_table():
+    global _workspace_table
+    if _workspace_table is None:
+        import lancedb
+        db_path = INDEX_ROOT / "lancedb"
+        if not db_path.exists():
+            raise RuntimeError(
+                f"No index at {INDEX_ROOT}. Run: python .claude/skills/dayz-rag-workspace-index/index.py"
+            )
+        db = lancedb.connect(str(db_path))
+        if WORKSPACE_TABLE_NAME not in db.table_names():
+            raise RuntimeError(
+                f"Workspace index table '{WORKSPACE_TABLE_NAME}' missing. "
+                "Run /dayz-rag-workspace-index first."
+            )
+        _workspace_table = db.open_table(WORKSPACE_TABLE_NAME)
+    return _workspace_table
+
+
+def search_dayz_workspace_impl(
+    query: str,
+    top_k: int = 5,
+    file_type: Optional[str] = None,
+    mod: Optional[str] = None,
+) -> list[dict]:
+    """Semantic search over your own mod source under workspace/<ModName>/."""
+    if not query or not query.strip():
+        return []
+    top_k = max(1, min(int(top_k), MAX_TOP_K))
+    if file_type is not None and file_type not in VALID_FILE_TYPES:
+        raise ValueError(f"file_type must be one of {sorted(VALID_FILE_TYPES)} or None")
+
+    table = _get_workspace_table()
+    vec = _embed_query(query)
+    # Over-fetch when filtering, then slice down to top_k after the filter.
+    needed_overscan = 4 if (file_type or mod) else 1
+    rows = table.search(vec).limit(top_k * needed_overscan).to_list()
+    if file_type:
+        rows = [r for r in rows if r.get("file_type") == file_type]
+    if mod:
+        rows = [r for r in rows if r.get("mod_name") == mod]
+    rows = rows[:top_k]
+    out = []
+    for r in rows:
+        hit = _format_hit(r)
+        hit["mod_name"] = r.get("mod_name", "")
+        out.append(hit)
+    return out
 
 
 def _format_hit(row: dict) -> dict:
@@ -230,6 +282,7 @@ def list_indexed_sources_impl() -> dict:
     out: dict = {}
     src_manifest = INDEX_ROOT / "manifest.json"
     wiki_manifest = INDEX_ROOT / "wiki-manifest.json"
+    workspace_manifest = INDEX_ROOT / "workspace-manifest.json"
     if src_manifest.exists():
         try:
             out["source"] = json.loads(src_manifest.read_text(encoding="utf-8"))
@@ -240,6 +293,11 @@ def list_indexed_sources_impl() -> dict:
             out["wiki"] = json.loads(wiki_manifest.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as e:
             out["wiki"] = {"error": f"wiki manifest unreadable: {e}"}
+    if workspace_manifest.exists():
+        try:
+            out["workspace"] = json.loads(workspace_manifest.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            out["workspace"] = {"error": f"workspace manifest unreadable: {e}"}
     if not out:
         return {"error": f"no index at {INDEX_ROOT}", "hint": "run /dayz-rag-index --full and/or /dayz-rag-wiki-index --full"}
     # Backwards compat: when only source is present, return source manifest at top level
@@ -309,6 +367,30 @@ def main() -> int:
         where `path` is the wiki page URL and `parent_context` is "Page Title > Section > Subsection".
         """
         return search_dayz_wiki_impl(query, top_k)
+
+    @mcp.tool()
+    def search_dayz_workspace(
+        query: str,
+        top_k: int = 5,
+        file_type: Optional[str] = None,
+        mod: Optional[str] = None,
+    ) -> list[dict]:
+        """Semantic search over YOUR own mod source under workspace/<ModName>/.
+
+        Use this for "how does my mod handle X" questions. Mirrors search_dayz_source
+        but queries the workspace_chunks table populated by /dayz-rag-workspace-index.
+
+        Args:
+            query: natural-language question or description
+            top_k: max results (1-25, default 5)
+            file_type: filter to one of "c", "cpp", "hpp", "h", "layout", "cfg",
+                "rvmat", "xml", "json", "csv" (default: all)
+            mod: filter to a specific mod folder under workspace/ (default: all mods)
+
+        Returns: list of {path, mod_name, file_type, parent_context, line_start,
+            line_end, score, snippet}.
+        """
+        return search_dayz_workspace_impl(query, top_k, file_type, mod)
 
     @mcp.tool()
     def list_indexed_sources() -> dict:

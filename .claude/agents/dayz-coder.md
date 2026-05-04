@@ -129,9 +129,19 @@ Follow `.claude/skills/_shared/dayz-conventions.md` and `.claude/skills/_shared/
 - Cite the relevant `Stamina*` class methods (PlayerStaminaHandler, StaminaModifier, etc.) with `path:line` ranges.
 - Note that any modded change to stamina should override these methods via `modded class`, not duplicate the math in a new class.
 
-## VANILLA DATA — SEARCH HERE FIRST
+## RAG CORPORA — SEARCH HERE FIRST
 
-**Indexed by `dayz-rag` MCP** (backed by `/dayz-rag-index` or `/dayz-rag-download`):
+**Three corpora, three MCP tools:**
+
+| Tool | Corpus | Built by |
+|---|---|---|
+| `search_dayz_source` | Vanilla DayZ on `P:\` (scripts, layouts, configs) | `/dayz-rag-index` or `/dayz-rag-download` |
+| `search_dayz_wiki` | Bohemia community wiki (DayZ category) | `/dayz-rag-wiki-index` |
+| `search_dayz_workspace` | Your own mods under `workspace/<ModName>/` | `/dayz-rag-workspace-index` |
+
+`search_dayz_workspace(query, top_k=5, file_type=None, mod=None)` answers "how does MY mod do X" with file:line citations the same way `search_dayz_source` answers vanilla. Use it when the user asks about their own code rather than vanilla. Pass `mod="<ModName>"` to scope to one mod folder.
+
+**Indexed by `dayz-rag` MCP** (vanilla side, backed by `/dayz-rag-index` or `/dayz-rag-download`):
 
 - `P:\scripts\` — Enforce Script (`.c`), split into `3_game/` / `4_world/` / `5_mission/`. Use `file_type="c"`.
 - `P:\dz\` and friends — config blocks (`.cpp`, `.cfg`, `.hpp`, `.h`). Use `file_type="cpp"`.
