@@ -1,6 +1,4 @@
-// Sidecar HTTP client.
-// In production the Tauri shell tells us the port via `get_sidecar_status`.
-// In dev mode we default to 7321 (the sidecar's first-try port).
+// Sidecar HTTP client — D1 endpoints + D2 additions.
 
 import { invoke } from "@tauri-apps/api/core";
 
@@ -14,7 +12,6 @@ export interface SidecarStatus {
 
 async function getPort(): Promise<number> {
   if (cachedPort !== null) return cachedPort;
-  // Try the Tauri command first.
   try {
     const status = await invoke<SidecarStatus>("get_sidecar_status");
     if (status.port) {
@@ -22,10 +19,14 @@ async function getPort(): Promise<number> {
       return cachedPort;
     }
   } catch {
-    // Browser dev mode (non-Tauri) — fall through to default.
+    // Browser dev mode (non-Tauri) — fall through.
   }
   cachedPort = 7321;
   return cachedPort;
+}
+
+export async function sidecarBaseUrl(): Promise<string> {
+  return `http://127.0.0.1:${await getPort()}`;
 }
 
 export async function api<T = unknown>(path: string, init?: RequestInit): Promise<T> {
@@ -41,7 +42,7 @@ export async function api<T = unknown>(path: string, init?: RequestInit): Promis
   return res.json();
 }
 
-// Typed endpoint wrappers --------------------------------------------------
+// -------- D1 types --------
 
 export interface HealthResponse {
   status: string;
@@ -80,9 +81,83 @@ export interface ModListResponse {
   mods: ModSummary[];
 }
 
+// -------- D2 types --------
+
+export interface StartRunResponse {
+  run_id: string;
+  skill: string;
+  args: string[];
+  started_at: number;
+}
+
+export interface ActiveRun {
+  run_id: string;
+  mod_name: string | null;
+  skill: string;
+  started_at: number;
+  pid: number;
+}
+
+export interface ActiveRunsResponse {
+  runs: ActiveRun[];
+}
+
+export interface WatchLogEvent {
+  ts: number;
+  ts_iso?: string;
+  event: string;
+  // Common fields across event types:
+  mod?: string;
+  severity?: "error" | "warning" | "info";
+  lane?: "config" | "script" | "asset" | "server" | "ui" | "debug" | string;
+  pattern?: string;
+  hint?: string;
+  excerpt?: string;
+  log_path?: string;
+  log_tail?: string;
+  exit_code?: number;
+  elapsed_seconds?: number;
+  consecutive_failures?: number;
+  // Allow forward-compat fields:
+  [key: string]: unknown;
+}
+
+export interface RunStreamLine {
+  ts: number;
+  stream: "stdout" | "stderr" | "exit" | "_eof";
+  line?: string;
+  exit_code?: number;
+  elapsed?: number;
+}
+
+// -------- D1 endpoint wrappers --------
+
 export const Api = {
+  // D1
   health: () => api<HealthResponse>("/api/health"),
   repoInfo: () => api<RepoInfo>("/api/repo/info"),
   preflight: () => api<PreflightResponse>("/api/preflight"),
   listMods: () => api<ModListResponse>("/api/mods"),
+
+  // D2
+  newMod: (name: string, author?: string) =>
+    api<StartRunResponse>("/api/mods/new", {
+      method: "POST",
+      body: JSON.stringify({ name, author }),
+    }),
+  buildMod: (name: string, opts: { clean?: boolean } = {}) =>
+    api<StartRunResponse>(
+      `/api/mods/${encodeURIComponent(name)}/build${opts.clean ? "?clean=true" : ""}`,
+      { method: "POST" }
+    ),
+  launchMod: (name: string, mapName = "chernarus") =>
+    api<StartRunResponse>(
+      `/api/mods/${encodeURIComponent(name)}/launch?map_name=${encodeURIComponent(mapName)}`,
+      { method: "POST" }
+    ),
+  stopDiag: (name: string) =>
+    api<StartRunResponse>(`/api/mods/${encodeURIComponent(name)}/stop`, { method: "POST" }),
+  activeRuns: () => api<ActiveRunsResponse>("/api/runs/active"),
+  killRun: (runId: string) =>
+    api<{ ok: boolean }>(`/api/runs/${runId}/kill`, { method: "POST" }),
 };

@@ -1,14 +1,17 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Boxes, Plus, AlertTriangle } from "lucide-react";
 import { Api } from "../api/client";
 import { useStatus } from "../stores/useStatus";
+import { NewModDialog } from "./NewModDialog";
 
 export function ModSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const setSelected = useStatus((s) => s.setSelectedMod);
   const mods = useQuery({ queryKey: ["mods"], queryFn: Api.listMods });
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
     <aside className="w-64 border-r border-bg-elevated bg-bg-panel flex flex-col">
@@ -30,7 +33,7 @@ export function ModSidebar() {
         {mods.data?.mods.length === 0 && (
           <div className="text-xs text-muted px-2 py-3">
             No mods under <code className="text-accent-bright">workspace/</code>.
-            Run <code className="font-mono">/dayz-new-mod &lt;Name&gt;</code>.
+            Click "+ New mod" below to scaffold one.
           </div>
         )}
         {mods.data?.mods.map((mod) => {
@@ -48,16 +51,12 @@ export function ModSidebar() {
               }}
               className={
                 "w-full text-left px-2 py-1.5 rounded text-sm flex items-center gap-2 " +
-                (active
-                  ? "bg-accent-dim text-white"
-                  : "hover:bg-bg-elevated text-gray-200")
+                (active ? "bg-accent-dim text-white" : "hover:bg-bg-elevated text-gray-200")
               }
             >
               <span className="flex-1 truncate">{mod.name}</span>
               {issues > 0 && (
-                <span className="pill-warn" title={`${issues} issue(s)`}>
-                  {issues}
-                </span>
+                <span className="pill-warn" title={`${issues} issue(s)`}>{issues}</span>
               )}
             </button>
           );
@@ -65,10 +64,21 @@ export function ModSidebar() {
       </nav>
 
       <div className="p-2 border-t border-bg-elevated">
-        <button className="btn w-full flex items-center justify-center gap-2 text-xs">
-          <Plus className="w-3 h-3" /> New mod (D2)
+        <button
+          onClick={() => setDialogOpen(true)}
+          className="btn w-full flex items-center justify-center gap-2 text-xs"
+        >
+          <Plus className="w-3 h-3" /> New mod
         </button>
       </div>
+
+      <NewModDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onCreated={(name) => {
+          navigate(`/mod/${name}`);
+        }}
+      />
     </aside>
   );
 }

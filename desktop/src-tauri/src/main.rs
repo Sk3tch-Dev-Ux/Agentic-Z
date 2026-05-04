@@ -1,15 +1,15 @@
-// Agentic-Z desktop — Tauri entry point.
+// Agentic-Z desktop — Tauri entry point (D2).
+//
+// D2 changes vs D1:
+//   - Adds tauri-plugin-notification for native Windows toasts on log_error events.
+//   - Drops tauri-plugin-fs (frontend doesn't need direct fs access; sidecar
+//     handles it all over HTTP).
 //
 // Responsibilities:
-//   - Spawn the Python FastAPI sidecar at startup (subprocess; stdout/stderr piped).
+//   - Spawn the Python FastAPI sidecar at startup.
 //   - Wait for the sidecar's port file at .claude/local-memory/agentic-z-desktop.port.
-//   - Expose a Tauri command `get_sidecar_port` so the frontend can read it.
-//   - Clean shutdown: kill the sidecar when the window closes.
-//
-// Notes:
-//   - The sidecar binary path is resolved from the bundle resource folder
-//     (production) or from the dev workspace (dev mode).
-//   - Sidecar logs are forwarded to the Tauri stdout for debugging.
+//   - Expose `get_sidecar_status` and `get_repo_root` Tauri commands.
+//   - Clean shutdown: kill the sidecar on window close.
 
 #![cfg_attr(
     all(not(debug_assertions), target_os = "windows"),
@@ -36,12 +36,8 @@ struct AppState {
 }
 
 fn resolve_sidecar_main(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
-    // In dev mode the sidecar source lives at desktop/sidecar/main.py relative
-    // to the cwd. In production it's bundled as a resource.
     if cfg!(debug_assertions) {
         let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-        // Tauri runs with cwd at desktop/src-tauri/ during dev; main.py lives
-        // one level up + over.
         let candidate = cwd.join("..").join("sidecar").join("main.py");
         if candidate.exists() {
             return Ok(candidate);
@@ -51,7 +47,6 @@ fn resolve_sidecar_main(app_handle: &tauri::AppHandle) -> Result<PathBuf, String
             candidate
         ));
     }
-    // Production: resource folder.
     app_handle
         .path()
         .resource_dir()
@@ -99,7 +94,6 @@ fn get_sidecar_status(state: tauri::State<'_, AppState>) -> SidecarStatus {
 
 #[tauri::command]
 fn get_repo_root() -> Result<String, String> {
-    // Walk up from the current dir until we find CLAUDE.md (the repo root marker).
     let mut cur = std::env::current_dir().map_err(|e| e.to_string())?;
     for _ in 0..10 {
         if cur.join("CLAUDE.md").exists() {
@@ -115,8 +109,8 @@ fn get_repo_root() -> Result<String, String> {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(AppState {
             child: Mutex::new(None),
             status: Mutex::new(SidecarStatus::default()),
@@ -129,7 +123,6 @@ fn main() {
             let app_handle = app.handle().clone();
             let state = app.state::<AppState>();
 
-            // Resolve repo root by walking up from cwd.
             let mut cur = std::env::current_dir().expect("cwd available");
             let mut repo_root: Option<PathBuf> = None;
             for _ in 0..10 {
@@ -150,7 +143,6 @@ fn main() {
                 }
             };
 
-            // Spawn the sidecar.
             match spawn_sidecar(&app_handle, &repo_root) {
                 Ok(child) => {
                     let pid = child.id();
@@ -165,12 +157,6 @@ fn main() {
                 }
             };
 
-            // Wait briefly for the port file. The sidecar writes it within
-            // ~50-200ms of startup; we poll for up to 10s.
-            //
-            // Can't move `state: State<'_, AppState>` into a 'static thread
-            // (it borrows from `app`). Clone the AppHandle (which IS 'static —
-            // it's an Arc internally) and re-acquire state inside the thread.
             let app_handle_for_thread = app.handle().clone();
             let repo_root_clone = repo_root.clone();
             std::thread::spawn(move || {
@@ -192,9 +178,6 @@ fn main() {
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                // Bind the Option<Child> to its own variable so the MutexGuard
-                // (and thus the borrow of `state`) is dropped before the if-let
-                // body runs. Avoids E0597.
                 let state: tauri::State<'_, AppState> = window.state();
                 let child_opt = state.child.lock().unwrap().take();
                 if let Some(mut child) = child_opt {
