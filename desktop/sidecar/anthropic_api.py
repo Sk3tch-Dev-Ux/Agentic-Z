@@ -19,6 +19,7 @@ import asyncio
 import sys as _sys
 _sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent))
 from _junction_helper import create_junction
+from _enscript_lint import lint_enscript_source
 import json
 import os
 import re
@@ -441,6 +442,19 @@ def make_router(repo_root: Path) -> APIRouter:
                                 rel = str(tool_input.get("path", "")).strip()
                                 content = str(tool_input.get("content", ""))
                                 target = _safe_path_in_mod(mod_root, rel)
+                                # D6.4: pre-write linter for .c files. If errors,
+                                # tell Claude exactly what to fix and let it retry.
+                                lint_errors = lint_enscript_source(content, path=rel)
+                                if lint_errors:
+                                    err = "Refused. Fix these issues and call write_file again:\n" + \
+                                        "\n".join(f"  - {e}" for e in lint_errors)
+                                    yield _format_sse({"path": rel, "errors": lint_errors},
+                                                      event="lint_failed")
+                                    tool_results.append({
+                                        "type": "tool_result", "tool_use_id": block.id,
+                                        "content": err, "is_error": True,
+                                    })
+                                    continue
                                 if target is None:
                                     err = f"refused: path '{rel}' escapes mod root"
                                     yield _format_sse({"error": err, "path": rel}, event="error")
