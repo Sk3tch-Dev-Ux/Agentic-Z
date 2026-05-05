@@ -259,6 +259,14 @@ def make_router(repo_root: Path) -> APIRouter:
             f"Mod name: {body.name}\n"
             f"Author: {author}\n"
             f"Pitch: {body.pitch}\n\n"
+            f"CRITICAL — verify before you write. Before declaring `modded class X`, "
+            f"call `search_vanilla(query=\"class X\")` to confirm X exists in vanilla. If you "
+            f"don't see X in the results, DO NOT modded-class it — pick a real vanilla class to "
+            f"extend instead. Hallucinated class names cause `Unknown type 'X'` compile errors. "
+            f"Use `read_vanilla_file` to inspect a hit's full context if you need to check method "
+            f"signatures or override semantics. For medical mods, requiredAddons[] should include "
+            f"\"DZ_Gear_Medical\". Weapons: \"DZ_Weapons_Firearms\". Vehicles: "
+            f"\"DZ_Vehicles_Wheeled\".\n\n"
             f"Mandatory: write `config.cpp` (with CfgPatches) and `$PBOPREFIX$`. "
             f"Place Enforce Script files in scripts/3_Game/, scripts/4_World/, scripts/5_Mission/ "
             f"as appropriate. Follow the EnScript style guide and L2 conventions you already know. "
@@ -268,6 +276,39 @@ def make_router(repo_root: Path) -> APIRouter:
         )
 
         tools = [
+            {
+                "name": "search_vanilla",
+                "description": (
+                    "Semantic search over indexed vanilla DayZ source. "
+                    "USE THIS to verify class names exist before writing a modded class. "
+                    "Returns top-K matching chunks with file paths, line ranges, and snippets."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "top_k": {"type": "integer"},
+                        "file_type": {"type": "string"},
+                    },
+                    "required": ["query"],
+                },
+            },
+            {
+                "name": "read_vanilla_file",
+                "description": (
+                    "Fetch a line range from a vanilla DayZ source file (paths under P:\\). "
+                    "Use after search_vanilla to read full context."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string"},
+                        "line_start": {"type": "integer"},
+                        "line_end": {"type": "integer"},
+                    },
+                    "required": ["path"],
+                },
+            },
             {
                 "name": "write_file",
                 "description": (
@@ -334,6 +375,68 @@ def make_router(repo_root: Path) -> APIRouter:
                             })
                             tool_name = block.name
                             tool_input = block.input or {}
+                            if tool_name == "search_vanilla":
+                                try:
+                                    rag_dir = repo_root / ".claude" / "mcp" / "dayz-rag"
+                                    if str(rag_dir) not in sys.path:
+                                        sys.path.insert(0, str(rag_dir))
+                                    import server as _rag  # type: ignore
+                                    rows = _rag.search_dayz_source_impl(
+                                        str(tool_input.get("query", "")),
+                                        int(tool_input.get("top_k", 3)),
+                                        tool_input.get("file_type"),
+                                    )
+                                    digest = []
+                                    for r in rows:
+                                        digest.append({
+                                            "path": r.get("path", ""),
+                                            "parent": r.get("parent_context", ""),
+                                            "lines": f"{r.get('line_start', 0)}-{r.get('line_end', 0)}",
+                                            "snippet": (r.get("snippet", "") or "")[:1200],
+                                        })
+                                    result_text = json.dumps(digest, indent=2) if rows else (
+                                        "No matches. The class/symbol likely does NOT exist in "
+                                        "vanilla. Pick a different (real) class to extend."
+                                    )
+                                    yield _format_sse({"query": tool_input.get("query", ""),
+                                                       "hits": len(rows)}, event="search")
+                                    tool_results.append({
+                                        "type": "tool_result", "tool_use_id": block.id,
+                                        "content": result_text,
+                                    })
+                                except Exception as e:
+                                    err = f"search_vanilla failed: {e}. Continue carefully."
+                                    yield _format_sse({"error": err}, event="error")
+                                    tool_results.append({
+                                        "type": "tool_result", "tool_use_id": block.id,
+                                        "content": err, "is_error": True,
+                                    })
+                                continue
+                            if tool_name == "read_vanilla_file":
+                                try:
+                                    p = Path(str(tool_input.get("path", ""))).resolve()
+                                    if p.drive.upper() != "P:":
+                                        raise ValueError("path must be under P:\\")
+                                    text_full = p.read_text(encoding="utf-8", errors="replace")
+                                    lines_arr = text_full.splitlines()
+                                    s = max(1, int(tool_input.get("line_start", 1)))
+                                    e_end = (min(len(lines_arr), int(tool_input.get("line_end", 0)))
+                                             if tool_input.get("line_end") else len(lines_arr))
+                                    snippet = "\n".join(lines_arr[s-1:e_end])[:8000]
+                                    yield _format_sse({"path": str(p), "lines": f"{s}-{e_end}"},
+                                                      event="read_file")
+                                    tool_results.append({
+                                        "type": "tool_result", "tool_use_id": block.id,
+                                        "content": snippet,
+                                    })
+                                except Exception as e:
+                                    err = f"read_vanilla_file failed: {e}"
+                                    yield _format_sse({"error": err}, event="error")
+                                    tool_results.append({
+                                        "type": "tool_result", "tool_use_id": block.id,
+                                        "content": err, "is_error": True,
+                                    })
+                                continue
                             if tool_name == "write_file":
                                 rel = str(tool_input.get("path", "")).strip()
                                 content = str(tool_input.get("content", ""))
