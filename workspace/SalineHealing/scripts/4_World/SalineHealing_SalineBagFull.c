@@ -1,45 +1,29 @@
-// SalineHealing - patches the empty saline bag's transfer-complete path so
-// that finishing a SalineBag IV instantly grants the patient 30 HP.
+// SalineHealing - hooks the SalineMdfr player modifier so that finishing a
+// saline IV transfusion grants the patient an instant +30 HP bump.
 //
-// Vanilla flow (DayZ 1.x):
-//   * Player attaches a SalineBag_Full to the IV slot.
-//   * Quantity decrements over time on the server (TransferValues / agents).
-//   * When quantity hits zero the item is replaced/converted to SalineBag
-//     (empty) via the standard transfusion pipeline.
+// Vanilla flow (verified against P:\scripts\4_world\classes\playermodifiers\modifiers\saline.c):
+//   1. Player uses a SalineBagIV via ActionGiveSalineTarget/Self.
+//   2. The action attaches a SalineMdfr (ModifierBase) to the player.
+//   3. SalineMdfr.OnTick runs each tick, adding small Blood + Water amounts.
+//   4. SalineMdfr.DeactivateCondition returns true when attached_time > m_RegenTime.
+//   5. SalineMdfr.OnDeactivate(player) fires exactly once at completion.
 //
-// We hook AfterStoreLoad / OnQuantityChanged on the FULL bag and detect the
-// transition to empty while the bag is attached to a PlayerBase. That is
-// the single moment the heal should fire, and only on the server.
-modded class SalineBag
+// We override OnDeactivate on the modifier itself - that is THE single moment
+// the transfer is acknowledged complete, server-side, with the player ref in
+// hand. SalineBag (empty stub) and SalineBagIV (just registers actions) do
+// not have any usable lifecycle event for transfer completion.
+modded class SalineMdfr
 {
-	protected bool m_SalineHealing_HealApplied;
-
-	override void OnQuantityChanged(float delta)
+	override void OnDeactivate(PlayerBase player)
 	{
-		super.OnQuantityChanged(delta);
+		super.OnDeactivate(player);
 
 		if (!GetGame() || !GetGame().IsDedicatedServer())
 			return;
 
-		if (m_SalineHealing_HealApplied)
-			return;
-
-		if (GetQuantity() > 0)
-			return;
-
-		// Quantity has reached zero. Find the player this bag is attached to.
-		EntityAI parent = GetHierarchyParent();
-		if (!parent)
-			return;
-
-		PlayerBase player = PlayerBase.Cast(parent);
-		if (!player)
-			return;
-
-		if (!player.IsAlive())
+		if (!player || !player.IsAlive())
 			return;
 
 		SalineHealing_HealService.ApplyHeal(player);
-		m_SalineHealing_HealApplied = true;
 	}
 }
