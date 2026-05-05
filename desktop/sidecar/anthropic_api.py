@@ -16,6 +16,9 @@ Note: deliberately omits `from __future__ import annotations` — see proposals.
 for the same reason.
 """
 import asyncio
+import sys as _sys
+_sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent))
+from _junction_helper import create_junction
 import json
 import os
 import re
@@ -390,9 +393,23 @@ def make_router(repo_root: Path) -> APIRouter:
                     # max_tokens or other; bail out
                     break
 
+                # Create the P:\<ModName>\ junction so AddonBuilder can find the source.
+                # Mirrors the post-scaffold step from /dayz-new-mod.
+                jr = create_junction(mod_root, body.name)
+                if jr["ok"]:
+                    yield _format_sse({
+                        "kind": jr["kind"], "target": jr["target"], "mod": body.name,
+                    }, event="junction_created")
+                else:
+                    yield _format_sse({
+                        "error": f"junction creation failed: {jr['error']}",
+                        "target": jr["target"], "mod": body.name,
+                    }, event="junction_failed")
+
                 yield _format_sse({
                     "event": "done", "files": files_written, "summary": done_summary or "",
                     "iterations": iteration,
+                    "junction": {"ok": jr["ok"], "kind": jr.get("kind"), "error": jr.get("error")},
                 }, event="control")
             except Exception as e:
                 yield _format_sse({"error": str(e)[:500]}, event="error")
