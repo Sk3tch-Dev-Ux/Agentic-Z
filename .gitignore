@@ -18,3 +18,4 @@ __pycache__/
 # Release assets — uploaded to GitHub Releases, not committed (too big for git)
 output/release/
 *.tar.gz
+/workspace/_server

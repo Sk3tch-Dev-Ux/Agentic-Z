@@ -1,4 +1,4 @@
-// SalineHealing — patches the empty saline bag's transfer-complete path so
+// SalineHealing - patches the empty saline bag's transfer-complete path so
 // that finishing a SalineBag IV instantly grants the patient 30 HP.
 //
 // Vanilla flow (DayZ 1.x):
@@ -10,7 +10,7 @@
 // We hook AfterStoreLoad / OnQuantityChanged on the FULL bag and detect the
 // transition to empty while the bag is attached to a PlayerBase. That is
 // the single moment the heal should fire, and only on the server.
-modded class SalineBag_Full
+modded class SalineBag
 {
 	protected bool m_SalineHealing_HealApplied;
 

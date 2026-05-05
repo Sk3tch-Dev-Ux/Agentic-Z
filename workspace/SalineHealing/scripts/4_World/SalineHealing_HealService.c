@@ -1,4 +1,4 @@
-// SalineHealing — server-side heal application.
+// SalineHealing - server-side heal application.
 //
 // Centralised so the heal rule (amount, zone, type, clamping) lives in one
 // place and can be re-used if we later add a second item or an admin tool.

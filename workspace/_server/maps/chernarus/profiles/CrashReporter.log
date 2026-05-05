@@ -10,3 +10,15 @@
 09:20:17:462 CRASH REPORT : Sending Request...
 09:20:18:026 CRASH REPORT : Report Result: - SUCCESS - Crash GUID: a83f2152-01d9-45c1-923a-f8ca6e8b3ce8
 09:20:18:026 CRASH REPORT : Crash Reporter Finished!
+09:34:56:029 CRASH REPORT : Crash reporter started!
+09:34:56:029 CRASH REPORT : Started without dialog window! Automatically send Report.
+09:34:56:029 CRASH REPORT : Sending analytical data.
+09:34:56:030 CRASH REPORT : Sending Request...
+09:34:56:798 CRASH REPORT : Crash Analytics: OK
+09:34:56:813 CRASH REPORT : Preparing Report
+09:34:56:813 CRASH REPORT : Memory dump Size: 127 kb
+09:34:56:813 CRASH REPORT : Logs Size: 5 kb
+09:34:56:813 CRASH REPORT : Sending Crash Report!
+09:34:56:813 CRASH REPORT : Sending Request...
+09:34:57:359 CRASH REPORT : Report Result: - SUCCESS - Crash GUID: 246464d3-a682-4982-833f-8e0d34f80899
+09:34:57:359 CRASH REPORT : Crash Reporter Finished!

@@ -1,4 +1,4 @@
-// SalineHealing — tunable constants.
+// SalineHealing - tunable constants.
 // Kept in 3_Game so both client and server symbols see identical values.
 class SalineHealing_Constants
 {

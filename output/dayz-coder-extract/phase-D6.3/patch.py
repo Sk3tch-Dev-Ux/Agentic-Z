@@ -40,11 +40,16 @@ USER_MSG_NEW = '''        user_message = (
             f"signatures or override semantics. For medical mods, requiredAddons[] should include "
             f"\\"DZ_Gear_Medical\\". Weapons: \\"DZ_Weapons_Firearms\\". Vehicles: "
             f"\\"DZ_Vehicles_Wheeled\\".\\n\\n"
+            f"ASCII ONLY in source files. Enforce Script's parser does NOT tolerate "
+            f"non-ASCII characters anywhere - including comments. Use plain hyphens "
+            f"(-) not em dashes, straight quotes (' \\") not curly, and avoid Unicode "
+            f"arrows, bullets, or accented characters. Mojibake from em dashes is the "
+            f"#1 cause of \\"Expected ',' or ')'\\" compile errors in generated mods.\\n\\n"
             f"Mandatory: write `config.cpp` (with CfgPatches) and `$PBOPREFIX$`. "
             f"Place Enforce Script files in scripts/3_Game/, scripts/4_World/, scripts/5_Mission/ "
             f"as appropriate. Follow the EnScript style guide and L2 conventions you already know. "
             f"Use prefixed class names (e.g. {body.name}_Foo). Use `modded class` (no inheritance "
-            f"clause) when extending vanilla. Keep individual files focused — one class per file "
+            f"clause) when extending vanilla. Keep individual files focused - one class per file "
             f"unless very small. Do not exceed {MOD_CREATOR_MAX_FILES} files."
         )'''
 
