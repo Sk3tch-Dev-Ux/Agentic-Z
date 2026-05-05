@@ -1,0 +1,48 @@
+---------------------------------------------
+Log C:\Users\KurtE\OneDrive\Documents\GitHub\Agentic-Z\workspace\_server\!ClientDiagLogs\crash_2026-05-05_09-19-45.log started at 05.05. 09:19:46
+
+
+
+------------------------------------
+SK3TCHDEV, 05.05 2026 09:19:46
+Can't compile "World" script module!
+
+SalineHealing/scripts/4_World/salinehealing_salinebagfull.c(13): Unknown type 'SalineBag_Full'
+
+Runtime mode
+CLI params: profiles C:\Users\KurtE\OneDrive\Documents\GitHub\Agentic-Z\workspace\_server\!ClientDiagLogs mod P:\Mods\@SalineHealing connect 127.0.0.1 port 2302 filePatching  window  x 1920 y 1080 
+
+
+------------------------------------
+SK3TCHDEV, 05.05 2026 09:20:16
+Unhandled exception
+
+Program: C:\Program Files (x86)\Steam\steamapps\common\DayZ\DayZDiag_x64.exe
+Reason: Access violation. Illegal read by 0x7ff73d4b94c4 at 0x0
+
+SymGetSymFromAddr:487, addr:0x7ff73d4b94c4
+SymGetSymFromAddr:487, addr:0x7ff73d4b9538
+[CDPCreateServer]: ??? addr:0x7ff73db7322a
+[CDPCreateServer]: ??? addr:0x7ff73db78f4f
+[CDPCreateServer]: ??? addr:0x7ff73db79f61
+[CDPCreateServer]: ??? addr:0x7ff73db7a233
+SymGetSymFromAddr:487, addr:0x7ff73d63146b
+SymGetSymFromAddr:487, addr:0x7ff73d62cda9
+[CDPCreateServer]: ??? addr:0x7ff73db6f7e0
+[CDPCreateServer]: ??? addr:0x7ff73db790ef
+[CDPCreateServer]: ??? addr:0x7ff73db79f61
+[CDPCreateServer]: ??? addr:0x7ff73db7a233
+[CDPCreateServer]: ??? addr:0x7ff73db7ae5b
+SymGetSymFromAddr:487, addr:0x7ff73d5ed481
+SymGetSymFromAddr:487, addr:0x7ff73d5ec03d
+[CDPCreateServer]: ??? addr:0x7ff73ddd99a3
+SymGetSymFromAddr:487, addr:0x7ff73d7496de
+[CDPCreateServer]: ??? addr:0x7ff73df30712
+[BaseThreadInitThunk]: ??? addr:0x7ffed1f5e8d7
+[RtlUserThreadStart]: ??? addr:0x7ffed364c3fc
+[RtlUserThreadStart]: ??? addr:0x7ffed364c3fc
+
+
+
+Runtime mode
+CLI params: profiles C:\Users\KurtE\OneDrive\Documents\GitHub\Agentic-Z\workspace\_server\!ClientDiagLogs mod P:\Mods\@SalineHealing connect 127.0.0.1 port 2302 filePatching  window  x 1920 y 1080 

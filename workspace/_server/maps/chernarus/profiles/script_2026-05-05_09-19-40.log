@@ -1,0 +1,12 @@
+---------------------------------------------
+Log C:\Users\KurtE\OneDrive\Documents\GitHub\Agentic-Z\workspace\_server\maps\chernarus\profiles\script_2026-05-05_09-19-40.log started at 05.05. 09:19:40
+
+SCRIPT       : Module: GameLib; loaded 13x files; 13x classes; used 8/2097 kB (0%) of static memory; defines: "DAYZ_1_29,SERVER_FOR_WINDOWS,SERVER,PLATFORM_WINDOWS,DIAG,DIAG_DEVELOPER,NO_GUI,NO_GUI_INGAME,sakhal,SalineHealing,DayZ,FEATURE_CURSOR,FEATURE_NETWORK_RECONCILIATION,FEATURE_NETWORK_RECONCILATION"; CRC32: 00000000
+SCRIPT       : Registered 315 temporary action enum(s), UAN==315
+SCRIPT       : Module: Game; loaded 416x files; 1391x classes; used 4642/33554 kB (13%) of static memory; defines: "DAYZ_1_29,SERVER_FOR_WINDOWS,SERVER,PLATFORM_WINDOWS,DIAG,DIAG_DEVELOPER,NO_GUI,NO_GUI_INGAME,sakhal,SalineHealing,DayZ,FEATURE_CURSOR,FEATURE_NETWORK_RECONCILIATION,FEATURE_NETWORK_RECONCILATION"; CRC32: 00000000
+SCRIPT       : ... Backlit Effects Enabled
+SCRIPT    (E): @"SalineHealing/scripts/4_World/salinehealing_salinebagfull.c,13": Unknown type 'SalineBag_Full'
+SCRIPT    (E): Can't compile "World" script module!
+
+SalineHealing/scripts/4_World/salinehealing_salinebagfull.c(13): Unknown type 'SalineBag_Full'
+SCRIPT    (E): Failed to load entities script!

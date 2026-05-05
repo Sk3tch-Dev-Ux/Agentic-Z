@@ -1,0 +1,12 @@
+09:20:17:066 CRASH REPORT : Crash reporter started!
+09:20:17:066 CRASH REPORT : Started without dialog window! Automatically send Report.
+09:20:17:068 CRASH REPORT : Sending analytical data.
+09:20:17:068 CRASH REPORT : Sending Request...
+09:20:17:445 CRASH REPORT : Crash Analytics: OK
+09:20:17:461 CRASH REPORT : Preparing Report
+09:20:17:461 CRASH REPORT : Memory dump Size: 134 kb
+09:20:17:461 CRASH REPORT : Logs Size: 5 kb
+09:20:17:461 CRASH REPORT : Sending Crash Report!
+09:20:17:462 CRASH REPORT : Sending Request...
+09:20:18:026 CRASH REPORT : Report Result: - SUCCESS - Crash GUID: a83f2152-01d9-45c1-923a-f8ca6e8b3ce8
+09:20:18:026 CRASH REPORT : Crash Reporter Finished!
