@@ -166,6 +166,31 @@ Are reported to **NOT** show the correct filename and line number, but the last 
 - A member created with `new` that nothing else holds must be `ref`, or it is freed at once (engine behaviour, `language_memory.md` rule 1)
 - Avoid creating temporary objects in tight loops (unverified engine behaviour: performance is not visible on `P:\scripts`)
 
+### Compile-time gotchas
+
+Each of these was hit in a real session, where the compiler refused a script that looked fine. They are compiler behaviour, so they cannot be checked on `P:\`. The desktop Mod Creator's pre-write linter (`desktop/sidecar/_enscript_lint.py`) enforces the first two.
+
+**Keep `.c` files ASCII only.** That includes string literals and comments. Em dashes, curly quotes, the ellipsis character, non-breaking spaces, arrows and accented letters all break the parse. The error is misleading: an em dash inside a string gives `Expected ',' or ')'` pointing at the whole string, not at the character.
+
+| Bad | Good |
+|---|---|
+| `// Hello — world` | `// Hello - world` |
+| `Print("done…");` | `Print("done...");` |
+
+**Keep a call's argument expression on one line.** A string concatenation split across two lines inside `Print(...)` gives the same `Expected ',' or ')'` error, pointing at the first string literal. Build the value in a local first:
+
+```c
+// BAD
+Print("[Mod] Heals "
+    + Constants.HEAL_AMOUNT + " HP on complete.");
+
+// GOOD
+string msg = "[Mod] Heals " + Constants.HEAL_AMOUNT + " HP on complete.";
+Print(msg);
+```
+
+**Check the class exists before writing `modded class X`.** A guessed name gives `Unknown type 'X'`. Example: saline is a single `SalineBag` class that tracks its level through quantity; there is no `SalineBag_Full` the way blood bags have paired classes. Grep `P:\scripts\` or use `search_dayz_source` first; no hit means pick a real class.
+
 ---
 
 ## Engine traps & production pitfalls

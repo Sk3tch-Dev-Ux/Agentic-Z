@@ -66,6 +66,7 @@ TEMPLATE_PATHS = [
     ".markdownlint.json",
     ".markdownlint-cli2.jsonc",
     ".markdownlintignore",
+    "desktop",
 ]
 
 

@@ -29,6 +29,9 @@ All Enforce Script (`.c`) work follows `skills/_shared/enscript-style.md` (namin
   - `/dayz-health` and `/dayz-logwatch` only read gate results and logs.
   - `/dayz-route` only classifies the text of a request.
   - `/dayz-statusline` only edits a settings file, and the status line exists to show a broken environment.
+  - `/dayz-rag-workspace-index` only reads the mod's own files under `workspace/` and writes the index under `~/.claude/`; it never reads `P:\`.
+  - `/dayz-watch` runs `/dayz-preflight` itself at startup (unless `--no-preflight` is passed), and every build it starts goes through `/dayz-build-pbo`, which gates.
+  - `/dayz-director-status` only writes a status file under `.claude/local-memory/`.
 
   Every other skill that does work gates on preflight, including `/dayz-search-index` (it reads vanilla source on `P:\`). A new exception needs a stated reason here.
 - DayZ Tools is installed via Steam (Tools section).

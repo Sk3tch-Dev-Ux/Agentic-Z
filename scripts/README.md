@@ -6,6 +6,7 @@ A few wrappers call an outside paid API instead, with your own key from `.env` o
 
 - `ask.bat` and `dayz-search.bat` send each question to Voyage AI to embed it, which spends a few Voyage tokens per search. `ask.bat --grep` skips Voyage and searches the files on P: directly, and `ask.bat` does the same on its own, spending nothing, when `VOYAGE_API_KEY` is not set or no search index is installed.
 - `search-index.bat` embeds the whole vanilla corpus with Voyage, which spends a large share of the Voyage free tier. It asks before building when the projected total nears the free tier. `search-download.bat` installs the prebuilt index instead and spends no Voyage tokens.
+- `rag-workspace-index.bat` embeds your own mod files with Voyage, and `watch.bat` runs it after each save unless you pass `--no-rag`. Unchanged files are not embedded again.
 - `route.bat` asks TypeSafe's Jev only when its own rules are not confident and `TYPESAFE_API_KEY` is set.
 
 Use the slash command instead when you want Claude to run the step as part of a bigger task and read the result for you.
@@ -50,6 +51,9 @@ Use the slash command instead when you want Claude to run the step as part of a 
 | `dayz-search.bat` | Search the vanilla RAG index from the terminal | `dayz-search.bat "food spoilage"` |
 | `search-download.bat` | Install the prebuilt search index | `search-download.bat` |
 | `search-index.bat` | Build the search index yourself | `search-index.bat --full` |
+| `rag-workspace-index.bat` | Index your own mods under `workspace\` for `search_dayz_workspace` | `rag-workspace-index.bat MyVest` |
+| `watch.bat` | Watch `workspace\` and rebuild, re-index and re-check a mod on each save | `watch.bat MyVest --once` |
+| `director-status.bat` | Write the dayz-director status file the desktop app reads | `director-status.bat --help` |
 
 ## Setup (`scripts\setup\`)
 

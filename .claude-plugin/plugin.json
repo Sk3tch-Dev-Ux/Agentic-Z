@@ -57,7 +57,10 @@
     "./skills/dayz-balance",
     "./skills/dayz-upgrade-guard",
     "./skills/dayz-conflict-check",
-    "./skills/dayz-health"
+    "./skills/dayz-health",
+    "./skills/dayz-watch",
+    "./skills/dayz-rag-workspace-index",
+    "./skills/dayz-director-status"
   ],
   "agents": [
     "./agents/agent-creator.md",
@@ -89,7 +92,9 @@
     "./agents/dayz-wearables-specialist.md",
     "./agents/dayz-workbench-specialist.md",
     "./agents/figma-node-normalizer.md",
-    "./agents/figma-to-dayz-layout.md"
+    "./agents/figma-to-dayz-layout.md",
+    "./agents/dayz-coder.md",
+    "./agents/dayz-director.md"
   ],
   "mcpServers": {
     "dayz-rag": {

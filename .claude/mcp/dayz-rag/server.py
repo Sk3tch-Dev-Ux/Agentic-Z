@@ -43,6 +43,7 @@ import voyage_common  # noqa: E402  .env/API-key loading and the retry rule, sha
 
 INDEX_ROOT = Path.home() / ".claude" / "dayz-search-index"
 TABLE_NAME = "chunks"
+WORKSPACE_TABLE_NAME = "workspace_chunks"
 DEFAULT_EMBED_MODEL = "voyage-code-3"
 MAX_TOP_K = 25
 MAX_FILE_BYTES = 200_000
@@ -95,6 +96,7 @@ def _load_embed_model_name() -> str:
 _voyage_client = None
 _embed_model: Optional[str] = None
 _table = None
+_workspace_table = None
 _index_built_at: Optional[float] = None  # epoch seconds; set on first manifest load
 _file_hashes: Optional[dict] = None  # path -> sha256 the indexer recorded; set on first load
 # Raw rows per (query, top_k, file_type, build time), most recently used last.
@@ -253,6 +255,59 @@ def _check_stale(path_str: str) -> tuple[bool, Optional[str]]:
     return True, "modified"
 
 
+def _get_workspace_table():
+    global _workspace_table
+    if _workspace_table is None:
+        import lancedb
+        db_path = INDEX_ROOT / "lancedb"
+        if not db_path.exists():
+            raise RuntimeError(
+                f"No index at {INDEX_ROOT}. Run: python .claude/skills/dayz-rag-workspace-index/index.py"
+            )
+        db = lancedb.connect(str(db_path))
+        if WORKSPACE_TABLE_NAME not in db.table_names():
+            raise RuntimeError(
+                f"Workspace index table '{WORKSPACE_TABLE_NAME}' missing. "
+                "Run /dayz-rag-workspace-index first."
+            )
+        _workspace_table = db.open_table(WORKSPACE_TABLE_NAME)
+    return _workspace_table
+
+
+def search_dayz_workspace_impl(
+    query: str,
+    top_k: int = 5,
+    file_type: Optional[str] = None,
+    mod: Optional[str] = None,
+) -> list[dict]:
+    """Semantic search over your own mod source under workspace/<ModName>/."""
+    if not query or not query.strip():
+        return []
+    top_k = max(1, min(int(top_k), MAX_TOP_K))
+    if file_type is not None and file_type not in VALID_FILE_TYPES:
+        raise ValueError(f"file_type must be one of {sorted(VALID_FILE_TYPES)} or None")
+
+    table = _get_workspace_table()
+    vec = _embed_query(query)
+    # Over-fetch when filtering, then slice down to top_k after the filter.
+    needed_overscan = 4 if (file_type or mod) else 1
+    rows = table.search(vec).limit(top_k * needed_overscan).to_list()
+    if file_type:
+        rows = [r for r in rows if r.get("file_type") == file_type]
+    if mod:
+        rows = [r for r in rows if r.get("mod_name") == mod]
+    rows = rows[:top_k]
+    out = []
+    for r in rows:
+        hit = _format_hit(r)
+        # Staleness is judged against the vanilla index, so it means nothing here.
+        hit.pop("is_stale", None)
+        hit.pop("stale_reason", None)
+        hit["mod_name"] = r.get("mod_name", "")
+        out.append(hit)
+    return out
+
+
 def _format_hit(row: dict) -> dict:
     path_str = row.get("path", "")
     is_stale, stale_reason = _check_stale(path_str)
@@ -405,17 +460,21 @@ def _read_manifest(path: Path) -> Optional[dict]:
 
 
 def list_indexed_sources_impl() -> dict:
-    """Return {"source": manifest|None}.
+    """Return {"source": manifest|None}, plus "workspace" when that index exists.
 
     None means the index has not been built; it is a status answer, not an error.
     """
-    return {"source": _read_manifest(INDEX_ROOT / "manifest.json")}
+    out = {"source": _read_manifest(INDEX_ROOT / "manifest.json")}
+    workspace = _read_manifest(INDEX_ROOT / "workspace-manifest.json")
+    if workspace is not None:
+        out["workspace"] = workspace
+    return out
 
 
 # --------------- MCP wiring ---------------
 
 def build_app():
-    """Build the FastMCP app with its three read-only tools. Raises ImportError
+    """Build the FastMCP app with its read-only tools. Raises ImportError
     when the mcp SDK is missing."""
     import anyio
     from mcp.server.fastmcp import FastMCP
@@ -490,10 +549,35 @@ def build_app():
         """
         return await anyio.to_thread.run_sync(get_dayz_file_impl, path, line_start, line_end)
 
+    @mcp.tool(annotations=read_only_remote)
+    async def search_dayz_workspace(
+        query: str,
+        top_k: int = 5,
+        file_type: Optional[str] = None,
+        mod: Optional[str] = None,
+    ) -> list[dict]:
+        """Semantic search over YOUR own mod source under workspace/<ModName>/.
+
+        Use this for "how does my mod handle X" questions. Mirrors search_dayz_source
+        but queries the workspace_chunks table populated by /dayz-rag-workspace-index.
+
+        Args:
+            query: natural-language question or description
+            top_k: max results (1-25, default 5)
+            file_type: filter to one of "c", "cpp", "hpp", "h", "layout", "cfg",
+                "rvmat", "xml", "json", "csv" (default: all)
+            mod: filter to a specific mod folder under workspace/ (default: all mods)
+
+        Returns: list of {path, mod_name, file_type, parent_context, line_start,
+            line_end, distance, snippet}.
+        """
+        return await anyio.to_thread.run_sync(search_dayz_workspace_impl, query, top_k, file_type, mod)
+
     @mcp.tool(annotations=read_only)
     async def list_indexed_sources() -> dict:
-        """Return {"source": manifest} for the vanilla source index (P:\\). The
-        value is null when the index has not been built. The manifest includes
+        """Return {"source": manifest} for the vanilla source index (P:\\), plus
+        {"workspace": manifest} once /dayz-rag-workspace-index has run. The
+        source value is null when the index has not been built. The manifest includes
         per-type counts, embed model, indexed-at timestamp, token usage, and cost
         estimate.
 

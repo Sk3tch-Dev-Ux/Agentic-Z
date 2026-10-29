@@ -466,15 +466,16 @@ def test_valid_file_types_match_the_indexer():
     assert set(index.EXT_TYPE_MAP.values()) == server.VALID_FILE_TYPES
 
 
-def test_app_registers_three_read_only_tools():
+def test_app_registers_read_only_tools():
     pytest.importorskip("mcp")
     import asyncio
 
     tools = {t.name: t for t in asyncio.run(server.build_app().list_tools())}
-    assert set(tools) == {"search_dayz_source", "get_dayz_file", "list_indexed_sources"}
+    assert set(tools) == {"search_dayz_source", "search_dayz_workspace", "get_dayz_file", "list_indexed_sources"}
     for tool in tools.values():
         assert tool.annotations is not None and tool.annotations.readOnlyHint is True
     assert tools["search_dayz_source"].annotations.openWorldHint is True
+    assert tools["search_dayz_workspace"].annotations.openWorldHint is True
     # The MCP spec defaults openWorldHint to true, so the local tools must say False.
     assert tools["get_dayz_file"].annotations.openWorldHint is False
     assert tools["list_indexed_sources"].annotations.openWorldHint is False

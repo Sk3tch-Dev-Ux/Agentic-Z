@@ -28,7 +28,7 @@ What each file holds:
 | `enscript-style/control-flow-and-preprocessor.md` | Control Flow, Preprocessor Directives |
 | `enscript-style/modding-patterns.md` | Modding Patterns, Global Variables and Singletons, Property Access, Serialization, Input Handling, Module System |
 | `enscript-style/debugging-and-errors.md` | Debugging and Tracing, Error Handling |
-| `enscript-style/best-practices.md` | Best Practices, Common Pitfalls and Issues, Engine traps & production pitfalls, Conclusion |
+| `enscript-style/best-practices.md` | Best Practices, Common Pitfalls and Issues (including compile-time gotchas), Engine traps & production pitfalls, Conclusion |
 
 ## Style, not facts
 

@@ -177,7 +177,7 @@ READ_ONLY_GATES = {
 }
 
 # Agents a lead never starts: they plan, route or run the leads.
-NOT_LEAD_WORKERS = {"dayz-lead", "dayz-orchestrator", "dayz-router", "dayz-mod-architect"}
+NOT_LEAD_WORKERS = {"dayz-lead", "dayz-orchestrator", "dayz-router", "dayz-mod-architect", "dayz-coder", "dayz-director"}
 
 
 def test_every_dayz_worker_is_in_the_lead_table():

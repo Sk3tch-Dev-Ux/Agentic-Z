@@ -29,6 +29,9 @@ You route one DayZ modding request to the handler that should take it. You don't
 - `dayz-upgrade-guard` (skill): before a DayZ update, snapshot the vanilla classes; after it, list the mod classes whose vanilla parents changed and, with `--reindex`, rebuild the search index.
 - `dayz-release-pack` (skill): write a mod's Steam Workshop description, changelog, classname list and server owner install notes in one go, as generated files under `output/<ModName>-release/`. Put the mod name in `args.mod` when it is given. Editing the mod's own README.md or CHANGELOG.md is `dayz-docs-writer`.
 - `dayz-server-kit` (skill): zip a mod's types.xml entries, cfgeconomycore lines, load order and public key for server owners. Put the mod name in `args.mod` when it is given.
+- `dayz-rag-workspace-index` (skill): index the user's own mod source under `workspace/<ModName>/` so `search_dayz_workspace` can search it. Put the mod name in `args.mod` when it is given.
+- `dayz-watch` (skill): watch `workspace/` and rebuild, re-index and re-check a mod each time a file is saved. Put the mod name in `args.mod` when it is given.
+- `dayz-director-status` (skill): write the dayz-director run status file that the desktop app shows. Only the director calls it.
 - `dayz-ask` (skill): answer a question about how vanilla DayZ does something or where it lives, with `path:line` citations. Changing anything goes to the matching specialist instead.
 - `dayz-init` (skill): first-run setup ("init", "set up DayZ"), and afterwards the status hub: what is set up, the active mod and the next action.
 - `dayz-launch-workbench` (skill): open Enfusion Workbench on vanilla DayZ or on a mod. Put the mod name in `args.mod` when it is given.
