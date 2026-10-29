@@ -1,0 +1,61 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "P=python; python -c '' >/dev/null 2>&1 || P=py; \"$P\" \"$CLAUDE_PROJECT_DIR/hooks/scope_guard.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "P=python; python -c '' >/dev/null 2>&1 || P=py; \"$P\" \"$CLAUDE_PROJECT_DIR/hooks/edit_check.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "P=python; python -c '' >/dev/null 2>&1 || P=py; \"$P\" \"$CLAUDE_PROJECT_DIR/.claude/skills/agentic-z-update/update.py\" --check --quiet",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "P=python; python -c '' >/dev/null 2>&1 || P=py; \"$P\" \"$CLAUDE_PROJECT_DIR/hooks/paste_router.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/scripts/dev/docs-sync.bat\" --check --quiet",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
